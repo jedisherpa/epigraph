@@ -1,0 +1,390 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #090b0e;
+  --color-surface: #12161c;
+  --color-fg: #ece8e1;
+  --color-muted: #8a8f98;
+  --color-brass: #d4a574;
+  --color-line: #2a3038;
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Outfit", "Avenir Next", system-ui, sans-serif;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html,
+  body,
+  #root {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    min-height: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-weight: 380;
+    line-height: 1.5;
+    margin: 0;
+  }
+}
+
+.record {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+}
+
+.record-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.record-browse {
+  position: absolute;
+  top: 0.85rem;
+  left: 1rem;
+  background: transparent;
+  color: var(--color-muted);
+  border: 0;
+  min-height: 2.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.record-play {
+  position: absolute;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  background: var(--color-brass);
+  color: #1a140e;
+  border: 0;
+  border-radius: 999px;
+  min-height: 2.75rem;
+  padding: 0.4rem 1.4rem;
+  font-size: 0.95rem;
+}
+
+.record-play.quiet {
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.record-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 4.7rem;
+  transform: translateX(-50%);
+  width: min(38rem, calc(100% - 2.5rem));
+  margin: 0;
+  text-align: center;
+  color: var(--color-fg);
+  font-size: 1.05rem;
+  line-height: 1.35;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.92);
+  pointer-events: none;
+}
+
+@media (max-width: 800px) {
+  .record-caption {
+    font-size: 0.92rem;
+    bottom: 4.5rem;
+  }
+}
+
+.studio {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 1.25rem 2rem;
+  gap: 1rem;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.mast {
+  display: grid;
+  grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
+  gap: 1.5rem 2rem;
+  align-items: end;
+  padding-bottom: 0.25rem;
+}
+
+.kicker {
+  margin: 0 0 0.2rem;
+  color: var(--color-brass);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 460;
+  font-size: 3rem;
+  line-height: 0.95;
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.lede {
+  margin: 0;
+  color: var(--color-muted);
+  max-width: 40rem;
+  font-size: 1.05rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 17.5rem minmax(0, 1fr);
+  gap: 1rem;
+  min-height: 0;
+  flex: 1;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: calc(100vh - 11rem);
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.group {
+  margin: 0.85rem 0 0.1rem;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.scene {
+  text-align: left;
+  background: transparent;
+  color: var(--color-fg);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 1rem;
+  min-height: 3rem;
+}
+
+.scene span {
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.scene.on {
+  background: var(--color-surface);
+  border-color: var(--color-line);
+}
+
+.scene:hover {
+  border-color: var(--color-line);
+}
+
+.controls {
+  margin-top: 0.6rem;
+  padding: 0.9rem 0.85rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  border-top: 1px solid var(--color-line);
+}
+
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+legend {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.45rem;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pill,
+.ghost {
+  background: var(--color-surface);
+  color: var(--color-fg);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+  min-height: 2.5rem;
+}
+
+.pill.on {
+  background: var(--color-brass);
+  color: #1a140e;
+  border-color: var(--color-brass);
+}
+
+label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 0.5rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+label strong {
+  color: var(--color-fg);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--color-brass);
+  height: 1.6rem;
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.stat {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.stat strong {
+  display: block;
+  color: var(--color-brass);
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 460;
+  line-height: 1.1;
+}
+
+.board {
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  min-height: 28rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.stage-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  min-height: 28rem;
+}
+
+.note {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+  gap: 1rem 2rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.formula {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  line-height: 1.15;
+  color: var(--color-brass);
+}
+
+.note h2 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-weight: 460;
+  font-size: 1.35rem;
+}
+
+.note p {
+  margin: 0;
+  color: var(--color-muted);
+  max-width: 46rem;
+}
+
+.method {
+  margin-top: 0.75rem;
+  color: var(--color-fg);
+}
+
+@media (max-width: 800px) {
+  .studio {
+    padding: 1rem 0.9rem 1.5rem;
+  }
+
+  .mast,
+  .layout,
+  .note {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+  }
+
+  .rail {
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .scene {
+    min-width: 8.5rem;
+  }
+
+  .controls {
+    display: none;
+  }
+
+  .rail {
+    flex-wrap: wrap;
+  }
+
+  .controls {
+    display: flex;
+    width: 100%;
+    margin-top: 0.2rem;
+  }
+
+  .board,
+  .stage-canvas {
+    min-height: 22rem;
+  }
+
+  .formula {
+    font-size: 1.4rem;
+  }
+}

@@ -1,0 +1,14 @@
+node_modules
+.vercel
+.tanstack
+.grok
+artifacts
+attachments
+screenshots
+public/song.mp3
+public/fifth.mp3
+dist
+*.log
+.env
+.env.*
+.DS_Store
