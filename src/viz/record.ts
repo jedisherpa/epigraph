@@ -68,6 +68,83 @@ function layerAlpha(songT: number, breadth: number, index: number) {
   return smooth(GATE[index], GATE[index] + 0.14, breadth * opened);
 }
 
+export type PieceId = "leverage" | "fifth";
+
+export const PIECE_SECONDS: Record<PieceId, number> = {
+  leverage: SONG_SECONDS,
+  fifth: 223.15,
+};
+
+function lobe(t: number, a: number, b: number, c: number, d: number) {
+  if (t <= a || t >= d) return 0;
+  if (t < b) return smooth(a, b, t);
+  if (t < c) return 1;
+  return 1 - smooth(c, d, t);
+}
+
+function lerpKeys(t: number, keys: Array<[number, number]>) {
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    const [t0, v0] = keys[i - 1];
+    const [t1, v1] = keys[i];
+    if (t <= t1) return v0 + (v1 - v0) * smooth(t0, t1, t);
+  }
+  return keys[keys.length - 1][1];
+}
+
+const FIFTH_SIZE: Array<[number, number]> = [
+  [0, 0.72],
+  [20, 0.36],
+  [50, 0.58],
+  [82, 0.9],
+  [112, 0.46],
+  [152, 0.34],
+  [174, 0.74],
+  [192, 1],
+  [210, 0.55],
+  [223, 0.08],
+];
+
+const ECHO_KEYS: Array<[number, number]> = [
+  [0, 1],
+  [44, 1],
+  [64, 3],
+  [82, 5],
+  [100, 5],
+  [120, 1],
+  [156, 1],
+  [174, 2],
+  [190, 5],
+  [204, 5],
+  [216, 1],
+  [223, 1],
+];
+
+function fifthAlpha(t: number, index: number) {
+  if (index === 12) return Math.min(1, lobe(t, -8, 10, 48, 68) + lobe(t, 162, 178, 206, 220));
+  if (index === 7) return Math.min(1, lobe(t, 78, 92, 136, 150) + lobe(t, 176, 188, 202, 214));
+  if (index === 6) return Math.min(1, lobe(t, 84, 98, 140, 154) + lobe(t, 176, 188, 202, 214));
+  if (index === 2) return Math.min(1, lobe(t, 88, 102, 146, 160) + lobe(t, 178, 190, 204, 216));
+  const lobes: Array<[number, number, number, number]> = [
+    [42, 56, 204, 218],
+    [58, 74, 186, 204],
+    [88, 102, 146, 160],
+    [45, 58, 198, 214],
+    [110, 126, 170, 186],
+    [64, 80, 182, 200],
+    [84, 98, 140, 154],
+    [78, 92, 136, 150],
+    [128, 146, 172, 188],
+    [156, 172, 202, 216],
+    [-8, 24, 206, 220],
+    [74, 92, 200, 216],
+    [2, 16, 48, 68],
+    [114, 132, 176, 194],
+  ];
+  const [a, b, c, d] = lobes[index];
+  return lobe(t, a, b, c, d);
+}
+
 const traceModel = fourier(sampleShape("star", 220));
 const TRACE: Array<[number, number]> = [];
 for (let i = 0; i <= 280; i++) {
@@ -91,13 +168,18 @@ export function drawRecord(
   dt: number,
   state: RecordState,
   pulse = 0,
+  piece: PieceId = "leverage",
 ) {
-  const breadth = breadthAt(songT);
-  const A = ORDER.map((_, i) => layerAlpha(songT, breadth, i));
+  const fifth = piece === "fifth";
+  const breadth = fifth ? lerpKeys(songT, FIFTH_SIZE) : breadthAt(songT);
+  const A = ORDER.map((_, i) => (fifth ? fifthAlpha(songT, i) : layerAlpha(songT, breadth, i)));
+  const echoN = fifth ? lerpKeys(songT, ECHO_KEYS) : 1;
+  const hush = fifth ? lobe(songT, 145, 151, 158, 166) : 0;
   const cx = w * 0.5;
   const cy = h * 0.44;
   const R = Math.min(w, h) * (0.2 + breadth * 0.14);
-  state.angle = (state.angle || 0) + dt * (0.85 + breadth * 2.6);
+  const speed = (fifth ? 0.4 + echoN * 0.32 : 0.85 + breadth * 2.6) * (1 - hush * 0.65);
+  state.angle = (state.angle || 0) + dt * speed;
   const spin = state.angle;
 
   ctx.fillStyle = palette.bg;
@@ -110,7 +192,7 @@ export function drawRecord(
   ctx.translate(-cx, -cy);
 
   if (pulse > 0.02) {
-    const hue = (32 + breadth * 210 + spin * 18) % 360;
+    const hue = fifth ? (250 + breadth * 50 + spin * 8) % 360 : (32 + breadth * 210 + spin * 18) % 360;
     const glow = ctx.createRadialGradient(cx, cy, R * 0.05, cx, cy, R * (1.35 + pulse * 0.85));
     glow.addColorStop(0, `hsla(${hue}, 85%, 62%, ${0.07 + pulse * 0.32})`);
     glow.addColorStop(0.45, `hsla(${(hue + 40) % 360}, 70%, 50%, ${0.04 + pulse * 0.12})`);
@@ -162,7 +244,7 @@ export function drawRecord(
       const spread = 0.06 + A[12] * 0.36;
       const ang = dot.ang + spin * 0.18;
       const rad = R * (1 + spread * (0.35 + dot.u));
-      ctx.fillStyle = `hsl(${(dot.ang * 48 + spin * 24) % 360}, 78%, 64%)`;
+      ctx.fillStyle = `hsl(${fifth ? 250 + ((dot.ang * 24) % 80) : (dot.ang * 48 + spin * 24) % 360}, ${fifth ? 70 : 78}%, 64%)`;
       ctx.fillRect(cx + rad * Math.cos(ang), cy + rad * Math.sin(ang), 2.2, 2.2);
     }
   });
@@ -200,16 +282,29 @@ export function drawRecord(
   });
 
   paint(0, () => {
-    const ring = ctx.createConicGradient(spin * 0.45, cx, cy);
-    ring.addColorStop(0, "#3ec6d6");
-    ring.addColorStop(0.33, "#e2b15a");
-    ring.addColorStop(0.66, "#ff6d9a");
-    ring.addColorStop(1, "#3ec6d6");
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.strokeStyle = ring;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    const copies = Math.max(1, Math.round(echoN));
+    for (let i = 0; i < copies; i++) {
+      const ring = ctx.createConicGradient(spin * 0.45 - i * 0.85, cx, cy);
+      if (fifth) {
+        ring.addColorStop(0, "#8ea2ff");
+        ring.addColorStop(0.34, "#d2b4ff");
+        ring.addColorStop(0.68, "#e2b15a");
+        ring.addColorStop(1, "#8ea2ff");
+      } else {
+        ring.addColorStop(0, "#3ec6d6");
+        ring.addColorStop(0.33, "#e2b15a");
+        ring.addColorStop(0.66, "#ff6d9a");
+        ring.addColorStop(1, "#3ec6d6");
+      }
+      ctx.save();
+      ctx.globalAlpha = 1 - i * 0.15;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * (1 - i * 0.1), 0, Math.PI * 2);
+      ctx.strokeStyle = ring;
+      ctx.lineWidth = i === 0 ? 2.1 : 1.15;
+      ctx.stroke();
+      ctx.restore();
+    }
   });
 
   paint(3, () => {
@@ -330,7 +425,7 @@ export function drawRecord(
     ctx.globalAlpha = Math.min(1, A[11]);
     state.particles.forEach((p, n) => {
       stepParticle(p, step);
-      const hue = (n * 47 + spin * 28) % 360;
+      const hue = fifth ? 248 + ((n * 19) % 78) : (n * 47 + spin * 28) % 360;
       ctx.strokeStyle = `hsla(${hue}, 80%, 64%, 0.75)`;
       ctx.fillStyle = `hsl(${hue}, 85%, 68%)`;
       ctx.beginPath();
@@ -364,7 +459,7 @@ export function drawRecord(
       if (i === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }
-    ctx.strokeStyle = "#ffe1a8";
+    ctx.strokeStyle = fifth ? "#d7c4ff" : "#ffe1a8";
     ctx.lineWidth = 1.7;
     ctx.stroke();
     ctx.restore();
@@ -376,7 +471,7 @@ export function drawRecord(
     const ty = tip.x * s + tip.y * c;
     ctx.beginPath();
     ctx.arc(cx + tx * scale, cy + ty * scale, 3.6, 0, Math.PI * 2);
-    ctx.fillStyle = "#ff6b4a";
+    ctx.fillStyle = fifth ? "#e2b15a" : "#ff6b4a";
     ctx.fill();
   });
 
@@ -393,26 +488,38 @@ export function drawRecord(
     ctx.fill();
   });
 
-  paint(0, () => {
+  const pointA = fifth ? lobe(songT, 40, 52, 218, 223) : A[0];
+  if (pointA > 0.02) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, pointA);
+    const copies = fifth ? Math.max(1, Math.round(echoN)) : 1;
+    for (let i = copies - 1; i >= 1; i--) {
+      const a = fiber - i * 0.7;
+      ctx.beginPath();
+      ctx.arc(cx + R * (1 - i * 0.1) * Math.cos(a), cy + R * (1 - i * 0.1) * Math.sin(a), 3.2, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${260 + i * 16}, 80%, 70%, ${0.55 - i * 0.08})`;
+      ctx.fill();
+    }
     for (let k = 7; k >= 0; k--) {
       const a = fiber - k * 0.16;
       ctx.beginPath();
       ctx.arc(cx + R * Math.cos(a), cy + R * Math.sin(a), 4.8 - k * 0.35, 0, Math.PI * 2);
-      ctx.fillStyle = k === 0 ? "#fff4df" : `hsla(${28 + k * 18}, 90%, 64%, ${0.85 - k * 0.1})`;
+      ctx.fillStyle = k === 0 ? "#fff4df" : `hsla(${fifth ? 250 + k * 8 : 28 + k * 18}, 90%, 64%, ${0.85 - k * 0.1})`;
       ctx.fill();
     }
     ctx.beginPath();
     ctx.arc(cx, cy, odd ? 3.4 : 5.5, 0, Math.PI * 2);
-    ctx.fillStyle = odd ? "#ff6d9a" : "#e2b15a";
+    ctx.fillStyle = odd ? (fifth ? "#d2b4ff" : "#ff6d9a") : "#e2b15a";
     ctx.fill();
     if (odd) {
       ctx.beginPath();
       ctx.arc(cx, cy, 8, 0, Math.PI * 2);
-      ctx.strokeStyle = "#ff6d9a";
+      ctx.strokeStyle = fifth ? "#d2b4ff" : "#ff6d9a";
       ctx.lineWidth = 1.2;
       ctx.stroke();
     }
-  });
+    ctx.restore();
+  }
 
   ctx.restore();
 
@@ -425,7 +532,7 @@ export function drawRecord(
   if (songT > 0.2) {
     ctx.fillStyle = palette.brass;
     ctx.globalAlpha = 0.85;
-    ctx.fillRect(0, h - 2, w * Math.min(1, songT / SONG_SECONDS), 2);
+    ctx.fillRect(0, h - 2, w * Math.min(1, songT / PIECE_SECONDS[piece]), 2);
     ctx.globalAlpha = 1;
   }
 }

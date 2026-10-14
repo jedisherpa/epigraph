@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { fifthCaption } from "@/viz/fifth-lyrics";
 import { captionAt } from "@/viz/lyrics";
-import { drawRecord, SONG_SECONDS, type RecordState } from "@/viz/record";
+import { drawRecord, PIECE_SECONDS, type PieceId, type RecordState } from "@/viz/record";
 
 type AudioGraph = {
   context: AudioContext;
@@ -17,6 +18,8 @@ export function Record({ onBrowse }: { onBrowse: () => void }) {
   const pulseRef = useRef(0);
   const graphRef = useRef<AudioGraph | null>(null);
   const captionRef = useRef("");
+  const pieceRef = useRef<PieceId>("fifth");
+  const [piece, setPiece] = useState<PieceId>("fifth");
   const [playing, setPlaying] = useState(false);
   const [ended, setEnded] = useState(false);
   const [caption, setCaption] = useState("");
@@ -72,7 +75,11 @@ export function Record({ onBrowse }: { onBrowse: () => void }) {
       const raw = level();
       const prev = pulseRef.current;
       pulseRef.current = raw > prev ? prev * 0.28 + raw * 0.72 : prev * 0.84 + raw * 0.16;
-      const nextCaption = playingRef.current ? captionAt(songT) : "";
+      const nextCaption = playingRef.current
+        ? pieceRef.current === "fifth"
+          ? fifthCaption(songT)
+          : captionAt(songT)
+        : "";
       if (nextCaption !== captionRef.current) {
         captionRef.current = nextCaption;
         setCaption(nextCaption);
@@ -87,7 +94,7 @@ export function Record({ onBrowse }: { onBrowse: () => void }) {
         canvas.height = ph;
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawRecord(ctx, w, h, songT, dt, stateRef.current, pulseRef.current);
+      drawRecord(ctx, w, h, songT, dt, stateRef.current, pulseRef.current, pieceRef.current);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -103,7 +110,7 @@ export function Record({ onBrowse }: { onBrowse: () => void }) {
       setPlaying(false);
       return;
     }
-    if (ended || audio.currentTime >= SONG_SECONDS - 0.05) {
+    if (ended || audio.currentTime >= PIECE_SECONDS[pieceRef.current] - 0.05) {
       audio.currentTime = 0;
       stateRef.current.particles = [];
       setEnded(false);
@@ -115,12 +122,31 @@ export function Record({ onBrowse }: { onBrowse: () => void }) {
     setPlaying(true);
   }
 
+  function choose(next: PieceId) {
+    if (next === pieceRef.current) return;
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.src = next === "fifth" ? "/fifth.mp3" : "/song.mp3";
+      audio.load();
+    }
+    playingRef.current = false;
+    pieceRef.current = next;
+    stateRef.current.particles = [];
+    stateRef.current.angle = 0;
+    captionRef.current = "";
+    setCaption("");
+    setEnded(false);
+    setPlaying(false);
+    setPiece(next);
+  }
+
   return (
     <div className="record">
       <canvas ref={canvasRef} className="record-canvas" aria-label="Continuous mathematical record" />
       <audio
         ref={audioRef}
-        src="/song.mp3"
+        src="/fifth.mp3"
         preload="auto"
         onEnded={() => {
           playingRef.current = false;
@@ -133,6 +159,14 @@ export function Record({ onBrowse }: { onBrowse: () => void }) {
       <button type="button" className="record-browse" onClick={onBrowse}>
         Constructions
       </button>
+      <div className="record-pieces">
+        <button type="button" className={piece === "leverage" ? "on" : ""} onClick={() => choose("leverage")}>
+          Leverage
+        </button>
+        <button type="button" className={piece === "fifth" ? "on" : ""} onClick={() => choose("fifth")}>
+          Fifth
+        </button>
+      </div>
       {caption ? (
         <p className="record-caption" aria-live="polite">
           {caption}
